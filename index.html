@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Магазин аккаунтов</title>
+<script>
+window.onerror=function(m,u,l){var a=document.getElementById("app");if(a)a.innerHTML='<p style="padding:20px;color:#c00;word-break:break-word">Ошибка: '+m+' (строка '+l+')</p>';};
+</script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{
@@ -32,6 +35,3 @@ textarea{min-height:90px;resize:vertical}
 .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .price{font-weight:700;white-space:nowrap}
 .hint{color:var(--hint);font-size:14px}
-.btn{display:block;width:100%;padding:13px;border:0;border-radius:12px;background:var(--btn);color:var(--btx);font:inherit;font-weight:600;margin-top:8px}
-.btn.sec{background:var(--bg);color:var(--link)}
-.btn.red{background:var(--bg);color:var(--red)}
