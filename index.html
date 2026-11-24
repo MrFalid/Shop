@@ -248,7 +248,8 @@
 <script>
 /* ========== НАСТРОЙКИ ========== */
 const BOT_USERNAME = "AkkPokypkaBot";
-const WEBHOOK_URL  = "https://api.telebotcreator.com/new-webhook?data=gAAAAABrBfFEigbMOOtmx1SHO6_U0vFIbM3plEK19urbv4ogJm38dCHET4lH6wrG7uPGwxEGyWxGO6oGoePvi8qNEX0NeYKBm1yr89OdaUHcibkwAXjhZn7eqcUZLPgRLggY4b8ePi0d69_zx1qBQPrjL83Gq3tmJUD8EJqFbqjNBIOQd9Cp6uwTvStcCzt-fLBDREXyP7Qg";
+// ВСТАВЬ СЮДА НОВУЮ ССЫЛКУ ИЗ БОТА: libs.Webhook.getUrlFor("site_api")
+const WEBHOOK_URL  = "https://api.telebotcreator.com/new-webhook?data=ТУТ_НОВАЯ_ССЫЛКА";
 const ADMIN_IDS    = [8699495960, 6545805439];
 const DONATE_URL   = "https://www.donationalerts.com/r/pokypkaakk";
 
@@ -300,18 +301,41 @@ function restoreSession(){
 }
 
 async function startTelegramAuth(){
+  const btn = $('tgLoginBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Загрузка...';
+  
   try{
     const data = await callBot('start_auth');
-    if(!data.ok){toast('❌ Ошибка генерации кода');return;}
+    console.log("Ответ от бота:", data);
+    
+    if(!data || !data.ok){
+      alert('❌ Ошибка от бота: ' + (data ? data.error : 'Пустой ответ. Проверьте команду site_api.'));
+      btn.disabled = false;
+      btn.textContent = '✈️ Войти через Telegram';
+      return;
+    }
+    
     _authCode = data.code;
     $('authCodeDisplay').textContent = data.code;
     $('authStatusText').textContent = 'Ожидание подтверждения...';
+    
     const link = `https://t.me/${BOT_USERNAME}?start=auth_${data.code}`;
     $('openBotBtn').href = link;
     $('authWaitOverlay').classList.remove('hidden');
-    window.open(link, '_blank');
+    
+    // Пытаемся открыть бота, если браузер блокирует — покажется модалка с кнопкой
+    const win = window.open(link, '_blank');
+    if(!win) {
+      toast('Откройте бота вручную по кнопке ниже', 4000);
+    }
+    
     startAuthPolling();
-  }catch(e){toast('❌ '+e.message);}
+  }catch(e){
+    alert('❌ Ошибка сети: ' + e.message + '\n\nПроверьте WEBHOOK_URL.');
+    btn.disabled = false;
+    btn.textContent = '✈️ Войти через Telegram';
+  }
 }
 
 function startAuthPolling(){
@@ -332,9 +356,14 @@ function startAuthPolling(){
         stopAuthPolling();
         $('authStatusText').textContent = '❌ Вход отклонён';
         toast('❌ Вход отклонён');
-        setTimeout(() => $('authWaitOverlay').classList.add('hidden'), 1500);
+        setTimeout(() => {
+          $('authWaitOverlay').classList.add('hidden');
+          const btn = $('tgLoginBtn');
+          btn.disabled = false;
+          btn.textContent = '✈️ Войти через Telegram';
+        }, 1500);
       }
-    }catch{}
+    }catch(e){ console.log("Poll error:", e); }
   }, 2000);
 }
 
@@ -347,6 +376,9 @@ $('authCancelBtn').addEventListener('click', () => {
   stopAuthPolling();
   $('authWaitOverlay').classList.add('hidden');
   _authCode = null;
+  const btn = $('tgLoginBtn');
+  btn.disabled = false;
+  btn.textContent = '✈️ Войти через Telegram';
 });
 
 /* ========== СТАРТ ПРИЛОЖЕНИЯ ========== */
@@ -594,4 +626,4 @@ function renderAdminAdd(box){
 if(restoreSession()) startApp();
 </script>
 </body>
-                                                                                           </html>
+</html>
