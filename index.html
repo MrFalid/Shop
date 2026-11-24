@@ -143,26 +143,21 @@
   <div class="login-box">
     <div class="icon">🛍</div>
     <h1>Магазин аккаунтов</h1>
-    <p>Войдите через Telegram-бота, чтобы покупать.</p>
-    <button class="btn primary" id="tgLoginBtn" style="width:100%;padding:14px;font-size:15px">
-      ✈️ Войти через Telegram
-    </button>
-    <div class="login-note">Откроется бот — подтвердите вход кнопкой «✅ Да».</div>
-  </div>
-</div>
+    <p>Войдите, чтобы покупать аккаунты.</p>
+    
+    <a href="https://t.me/AkkPokypkaBot?start=start_auth" target="_blank" class="btn primary" style="width:100%;padding:14px;font-size:15px;margin-bottom:16px;display:block;text-decoration:none;">
+      ✈️ Получить код в боте
+    </a>
 
-<!-- ============== МОДАЛКА ОЖИДАНИЯ ============== -->
-<div id="authWaitOverlay" class="overlay hidden">
-  <div class="modal" style="text-align:center">
-    <div style="font-size:48px">✈️</div>
-    <h2>Подтвердите вход в боте</h2>
-    <p style="color:var(--muted);font-size:14px">
-      Откройте бота и нажмите <b>«✅ Да»</b>.<br>Сайт войдёт автоматически.
-    </p>
-    <div class="pay-code" id="authCodeDisplay">— — — — — —</div>
-    <a class="btn primary" id="openBotBtn" target="_blank" style="width:100%;justify-content:center">Открыть бота</a>
-    <button class="btn" id="authCancelBtn" style="width:100%">Отмена</button>
-    <div style="font-size:12px;color:var(--muted);margin-top:6px" id="authStatusText">Ожидание подтверждения...</div>
+    <div style="text-align:left; margin-bottom:16px;">
+      <label style="font-size:13px; color:var(--muted); margin-bottom:6px; display:block;">Введите код из бота:</label>
+      <input id="authCodeInput" type="text" placeholder="A1B2C3" style="width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:12px;font-size:16px;text-align:center;letter-spacing:2px;text-transform:uppercase;outline:none;">
+    </div>
+
+    <button class="btn primary" id="loginWithCodeBtn" style="width:100%;padding:14px;font-size:15px">
+      ✅ Войти
+    </button>
+    <div id="loginError" style="color:var(--red);font-size:13px;margin-top:12px;display:none;"></div>
   </div>
 </div>
 
@@ -248,8 +243,7 @@
 <script>
 /* ========== НАСТРОЙКИ ========== */
 const BOT_USERNAME = "AkkPokypkaBot";
-// ВСТАВЬ СЮДА НОВУЮ ССЫЛКУ ИЗ БОТА: libs.Webhook.getUrlFor("site_api")
-const WEBHOOK_URL  = "https://api.telebotcreator.com/new-webhook?data=gAAAAABrBfY0TpN1aGAWKrf57vesdTkmP8ya5V8gYSyNCML48W9o0ERnK42ca9urj_acMHyk5IxHfFiLuyu4eScS5h_B9I8JNKOWS1dqT_xXcl623qPo5Xy8lInEJsWbRksMQm6Urn-P4OwcBmeL8zFF7-yv-ipPjlClUhfqGwNjEmPajqf2gyW8M7erO63BUdQdmf1JMFZp";
+const WEBHOOK_URL  = "https://api.telebotcreator.com/new-webhook?data=gAAAAABrBfwR1GvrAIfXLXPUYn26pGdmHaO-HhickD45beL1SCSIImRZqof8XeBemVuYVwg7PM1uCv_aCuSPUgLfk-nmawBlX2i9YmfD6UKfbRpx-H22Imag9ZDJUzlgd9f23HEPVTeWELE7SgR77sibSaYZVA_m6na2cNpPkgVUUW7wPSl05xoJUXYBNvrDuBXRacqytguN";
 const ADMIN_IDS    = [8699495960, 6545805439];
 const DONATE_URL   = "https://www.donationalerts.com/r/pokypkaakk";
 
@@ -280,11 +274,9 @@ function askConfirm(text,onYes){
 $('confirmNo').addEventListener('click',()=>{$('confirmOverlay').classList.add('hidden');_confirmCb=null;});
 $('confirmYes').addEventListener('click',()=>{$('confirmOverlay').classList.add('hidden');if(_confirmCb){const cb=_confirmCb;_confirmCb=null;cb();}});
 
-/* ========== АВТОРИЗАЦИЯ ЧЕРЕЗ БОТА ========== */
+/* ========== АВТОРИЗАЦИЯ ПО КОДУ ========== */
 let CURRENT_USER=null;
 let PRODUCTS_CACHE=[];
-let _authPollTimer=null;
-let _authCode=null;
 
 function logout(){
   localStorage.removeItem('tg_user');
@@ -300,85 +292,39 @@ function restoreSession(){
   return false;
 }
 
-async function startTelegramAuth(){
-  const btn = $('tgLoginBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Загрузка...';
+$('loginWithCodeBtn').addEventListener('click', async () => {
+  const code = $('authCodeInput').value.trim().toUpperCase();
+  const errBox = $('loginError');
   
-  try{
-    const data = await callBot('start_auth');
-    console.log("Ответ от бота:", data);
-    
-    if(!data || !data.ok){
-      alert('❌ Ошибка от бота: ' + (data ? data.error : 'Пустой ответ. Проверьте команду site_api.'));
-      btn.disabled = false;
-      btn.textContent = '✈️ Войти через Telegram';
-      return;
-    }
-    
-    _authCode = data.code;
-    $('authCodeDisplay').textContent = data.code;
-    $('authStatusText').textContent = 'Ожидание подтверждения...';
-    
-    const link = `https://t.me/${BOT_USERNAME}?start=auth_${data.code}`;
-    $('openBotBtn').href = link;
-    $('authWaitOverlay').classList.remove('hidden');
-    
-    // Пытаемся открыть бота, если браузер блокирует — покажется модалка с кнопкой
-    const win = window.open(link, '_blank');
-    if(!win) {
-      toast('Откройте бота вручную по кнопке ниже', 4000);
-    }
-    
-    startAuthPolling();
-  }catch(e){
-    alert('❌ Ошибка сети: ' + e.message + '\n\nПроверьте WEBHOOK_URL.');
-    btn.disabled = false;
-    btn.textContent = '✈️ Войти через Telegram';
+  if (!code || code.length < 4) {
+    errBox.textContent = '❌ Введите корректный код';
+    errBox.style.display = 'block';
+    return;
   }
-}
+  
+  const btn = $('loginWithCodeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Проверка...';
+  errBox.style.display = 'none';
 
-function startAuthPolling(){
-  stopAuthPolling();
-  _authPollTimer = setInterval(async () => {
-    if(!_authCode) return;
-    try{
-      const data = await callBot('check_auth', { code: _authCode });
-      if(!data.ok) return;
-      if(data.status === 'approved'){
-        stopAuthPolling();
-        CURRENT_USER = data.user;
-        localStorage.setItem('tg_user', JSON.stringify(CURRENT_USER));
-        $('authWaitOverlay').classList.add('hidden');
-        toast('✅ Вход выполнен!', 2000);
-        startApp();
-      } else if(data.status === 'rejected'){
-        stopAuthPolling();
-        $('authStatusText').textContent = '❌ Вход отклонён';
-        toast('❌ Вход отклонён');
-        setTimeout(() => {
-          $('authWaitOverlay').classList.add('hidden');
-          const btn = $('tgLoginBtn');
-          btn.disabled = false;
-          btn.textContent = '✈️ Войти через Telegram';
-        }, 1500);
-      }
-    }catch(e){ console.log("Poll error:", e); }
-  }, 2000);
-}
-
-function stopAuthPolling(){
-  if(_authPollTimer){clearInterval(_authPollTimer);_authPollTimer=null;}
-}
-
-$('tgLoginBtn').addEventListener('click', startTelegramAuth);
-$('authCancelBtn').addEventListener('click', () => {
-  stopAuthPolling();
-  $('authWaitOverlay').classList.add('hidden');
-  _authCode = null;
-  const btn = $('tgLoginBtn');
-  btn.disabled = false;
-  btn.textContent = '✈️ Войти через Telegram';
+  try {
+    const data = await callBot('login_by_code', { code: code });
+    if (data.ok && data.user) {
+      CURRENT_USER = data.user;
+      localStorage.setItem('tg_user', JSON.stringify(CURRENT_USER));
+      toast('✅ Вход выполнен!');
+      startApp();
+    } else {
+      errBox.textContent = '❌ ' + (data.error || 'Неверный код');
+      errBox.style.display = 'block';
+    }
+  } catch (e) {
+    errBox.textContent = '❌ Ошибка сети. Проверьте интернет.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✅ Войти';
+  }
 });
 
 /* ========== СТАРТ ПРИЛОЖЕНИЯ ========== */
