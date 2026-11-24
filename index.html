@@ -1,37 +1,536 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Магазин аккаунтов</title>
-<script>
-window.onerror=function(m,u,l){var a=document.getElementById("app");if(a)a.innerHTML='<p style="padding:20px;color:#c00;word-break:break-word">Ошибка: '+m+' (строка '+l+')</p>';};
-</script>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Магазин аккаунтов — AkkPokypka</title>
 <style>
-:root{
-  --bg:var(--tg-theme-bg-color,#fff);
-  --tx:var(--tg-theme-text-color,#111);
-  --hint:var(--tg-theme-hint-color,#8a8a8e);
-  --link:var(--tg-theme-link-color,#2481cc);
-  --btn:var(--tg-theme-button-color,#2481cc);
-  --btx:var(--tg-theme-button-text-color,#fff);
-  --sec:var(--tg-theme-secondary-bg-color,#f0f0f3);
-  --red:#e5484d;
+  :root{
+    --bg:#0b0e14; --bg2:#11151f; --card:#161b26; --card2:#1c2231;
+    --border:#242c3d; --text:#e8ecf4; --muted:#8891a4;
+    --accent:#5b8cff; --accent2:#7a5bff;
+    --green:#22c55e; --red:#ef4444; --yellow:#f59e0b;
+    --radius:16px; --shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%,rgba(122,91,255,.15),transparent 60%),
+      radial-gradient(900px 500px at 10% 10%,rgba(91,140,255,.12),transparent 60%),
+      var(--bg);
+    color:var(--text); min-height:100vh;
+  }
+  header{
+    position:sticky;top:0;z-index:20;
+    background:rgba(11,14,20,.75);backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);padding:14px 22px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .logo{font-size:18px;font-weight:800;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .btn{background:var(--card);color:var(--text);border:1px solid var(--border);
+    padding:9px 15px;border-radius:12px;cursor:pointer;font-size:14px;
+    transition:.18s;display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;
+    box-shadow:0 6px 18px rgba(91,140,255,.35)}
+  .btn.green{background:var(--green);border-color:var(--green);color:#fff}
+  .btn.red{background:var(--red);border-color:var(--red);color:#fff}
+  .btn.small{padding:6px 11px;font-size:13px;border-radius:9px}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .user-chip{display:flex;align-items:center;gap:9px;background:var(--card);
+    border:1px solid var(--border);padding:6px 12px 6px 6px;border-radius:999px;font-size:14px;}
+  .user-chip img,.user-chip .avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;}
+  main{max-width:1180px;margin:0 auto;padding:28px 22px 80px}
+  .hidden{display:none!important}
+  .hero{background:linear-gradient(135deg,rgba(91,140,255,.18),rgba(122,91,255,.12));
+    border:1px solid var(--border);border-radius:22px;padding:26px 28px;margin-bottom:24px;
+    display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+  .hero h2{font-size:24px;margin-bottom:6px}
+  .hero p{color:var(--muted);font-size:14px}
+  .hero .stat{display:flex;gap:22px}
+  .hero .stat div{text-align:center}
+  .hero .stat b{display:block;font-size:22px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .stat span{font-size:12px;color:var(--muted)}
+  .toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .search-wrap{position:relative;flex:1;min-width:240px}
+  .search-wrap input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);
+    padding:12px 16px 12px 42px;border-radius:14px;font-size:14px;outline:none;transition:.15s;}
+  .search-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.15)}
+  .search-wrap::before{content:"🔍";position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.7}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+  .card{background:linear-gradient(180deg,var(--card),var(--card2));
+    border:1px solid var(--border);border-radius:var(--radius);padding:18px;
+    display:flex;flex-direction:column;gap:12px;transition:.2s;position:relative;overflow:hidden;}
+  .card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:var(--shadow)}
+  .card h3{font-size:16px;font-weight:700}
+  .card .region{color:var(--muted);font-size:13px}
+  .card .desc{color:var(--muted);font-size:13px;line-height:1.5;flex:1;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .card .price{font-size:22px;font-weight:800;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .empty{text-align:center;padding:70px 20px;color:var(--muted);font-size:15px}
+  .empty .big{font-size:44px;margin-bottom:12px}
+  .status{font-size:12px;padding:4px 10px;border-radius:8px;display:inline-flex;
+    align-items:center;gap:5px;width:fit-content;font-weight:600}
+  .status.free{background:rgba(34,197,94,.15);color:var(--green)}
+  .status.pending{background:rgba(245,158,11,.15);color:var(--yellow)}
+  .status.sold{background:rgba(139,145,160,.15);color:var(--muted)}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
+  .modal{background:linear-gradient(180deg,var(--card),var(--card2));
+    border:1px solid var(--border);border-radius:20px;padding:26px;
+    width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px;
+    box-shadow:var(--shadow);max-height:90vh;overflow-y:auto;}
+  .modal h2{font-size:20px}
+  .modal input,.modal textarea{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);
+    padding:11px 13px;border-radius:12px;font-size:14px;font-family:inherit;outline:none;transition:.15s;}
+  .modal input:focus,.modal textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.15)}
+  .modal textarea{min-height:80px;resize:vertical}
+  .row{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+  .pay-code{font-size:26px;font-weight:900;letter-spacing:6px;text-align:center;padding:14px;
+    border:2px dashed var(--accent);border-radius:14px;background:rgba(91,140,255,.08);
+    color:var(--accent);font-family:"SF Mono",monospace;}
+  .admin-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .admin-tabs .btn.active{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff}
+  .order{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:12px;display:flex;flex-direction:column;gap:9px;transition:.15s;}
+  .order:hover{background:var(--card2)}
+  .order .meta{font-size:13px;color:var(--muted)}
+  .order .meta b{color:var(--text)}
+  .order .actions{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+  .order .head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--card2);border:1px solid var(--accent);color:var(--text);
+    padding:13px 22px;border-radius:14px;font-size:14px;z-index:200;
+    opacity:0;transition:.3s;pointer-events:none;box-shadow:var(--shadow);max-width:90vw;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-box{background:linear-gradient(180deg,var(--card),var(--card2));
+    border:1px solid var(--border);border-radius:24px;padding:40px 32px;
+    max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow);}
+  .login-box .icon{font-size:56px;margin-bottom:16px}
+  .login-box h1{font-size:24px;margin-bottom:8px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .login-box p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:24px}
+  .login-box .tg-widget-wrap{display:flex;justify-content:center;min-height:52px}
+  .login-note{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.5}
+  @media(max-width:600px){
+    header{padding:12px 14px;gap:10px}
+    .logo{font-size:16px}
+    nav{gap:6px;width:100%;margin-left:0}
+    main{padding:18px 14px 60px}
+    .hero{padding:20px;flex-direction:column;align-items:flex-start}
+    .grid{grid-template-columns:1fr}
+    .pay-code{font-size:20px;letter-spacing:4px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ЛОГИН -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <div class="icon">🛍</div>
+    <h1>Магазин аккаунтов</h1>
+    <p>Войдите через Telegram, чтобы покупать.</p>
+    <div class="tg-widget-wrap">
+      <script async src="https://telegram.org/js/telegram-widget.js?22"
+              data-telegram-login="AkkPokypkaBot"
+              data-size="large"
+              data-radius="12"
+              data-onauth="onTelegramAuth(user)"
+              data-request-access="write"></script>
+    </div>
+    <div class="login-note">Домен должен быть добавлен в BotFather через <b>/setdomain</b>.</div>
+  </div>
+</div>
+
+<!-- ПРИЛОЖЕНИЕ -->
+<div id="app" class="hidden">
+<header>
+  <div class="logo">🛍 Магазин аккаунтов</div>
+  <nav>
+    <button class="btn" data-nav="shop">🛒 Витрина</button>
+    <button class="btn" data-nav="search">🔍 Поиск</button>
+    <button class="btn" data-nav="purchases">🧾 Мои покупки</button>
+    <button class="btn hidden" data-nav="admin" id="adminNavBtn">👑 Админ</button>
+  </nav>
+  <div class="user-chip">
+    <div class="avatar" id="userAvatar">?</div>
+    <span id="userName">Гость</span>
+  </div>
+  <button class="btn ghost small" id="logoutBtn" title="Выйти">⎋</button>
+</header>
+
+<main>
+  <section id="view-shop">
+    <div class="hero">
+      <div><h2>Добро пожаловать 👋</h2><p>Аккаунты с гарантией. Оплата через DonationAlerts.</p></div>
+      <div class="stat">
+        <div><b id="statFree">0</b><span>свободно</span></div>
+        <div><b id="statSold">0</b><span>продано</span></div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><input id="shopSearch" placeholder="Быстрый поиск..."></div>
+      <button class="btn" id="refreshBtn">↻ Обновить</button>
+    </div>
+    <div id="shopGrid" class="grid"></div>
+  </section>
+
+  <section id="view-search" class="hidden">
+    <div class="toolbar">
+      <div class="search-wrap"><input id="searchInput" placeholder="Введите название..."></div>
+    </div>
+    <div id="searchGrid" class="grid"></div>
+  </section>
+
+  <section id="view-purchases" class="hidden"><div id="purchasesList"></div></section>
+
+  <section id="view-admin" class="hidden">
+    <div class="admin-tabs">
+      <button class="btn active" data-atab="products">📋 Товары</button>
+      <button class="btn" data-atab="orders">⏳ Заявки</button>
+      <button class="btn" data-atab="add">➕ Выставить товар</button>
+    </div>
+    <div id="adminContent"></div>
+  </section>
+</main>
+</div>
+
+<!-- МОДАЛКА ПОКУПКИ -->
+<div id="buyOverlay" class="overlay hidden">
+  <div class="modal">
+    <h2 id="buyTitle">Оплата</h2>
+    <div id="buyBody"></div>
+    <div class="row">
+      <button class="btn" id="buyCancel">❌ Отмена</button>
+      <button class="btn primary" id="buyConfirm">✅ Я оплатил</button>
+    </div>
+  </div>
+</div>
+
+<!-- ПОДТВЕРЖДЕНИЕ -->
+<div id="confirmOverlay" class="overlay hidden">
+  <div class="modal">
+    <h2>Подтверждение</h2>
+    <div id="confirmBody" style="color:var(--muted);font-size:14px"></div>
+    <div class="row">
+      <button class="btn" id="confirmNo">Отмена</button>
+      <button class="btn red" id="confirmYes">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ========== НАСТРОЙКИ ========== */
+const BOT_USERNAME = "AkkPokypkaBot";
+const WEBHOOK_URL  = "https://api.telebotcreator.com/new-webhook?data=gAAAAABrBfFEigbMOOtmx1SHO6_U0vFIbM3plEK19urbv4ogJm38dCHET4lH6wrG7uPGwxEGyWxGO6oGoePvi8qNEX0NeYKBm1yr89OdaUHcibkwAXjhZn7eqcUZLPgRLggY4b8ePi0d69_zx1qBQPrjL83Gq3tmJUD8EJqFbqjNBIOQd9Cp6uwTvStcCzt-fLBDREXyP7Qg";
+const ADMIN_IDS    = [8699495960, 6545805439];
+const DONATE_URL   = "https://www.donationalerts.com/r/pokypkaakk";
+
+/* ========== УТИЛИТЫ ========== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const int = v => parseInt(v,10)||0;
+
+function toast(text, ms=2400){
+  const t=$('toast'); t.textContent=text; t.classList.add('show');
+  clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove('show'),ms);
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
-#app{padding:14px 14px 90px;max-width:560px;margin:0 auto}
-h1{font-size:22px;margin:4px 0 12px}
-h2{font-size:20px;margin:0 0 4px}
-input,textarea{width:100%;padding:12px 14px;border:0;border-radius:12px;background:var(--sec);color:var(--tx);font:inherit;outline:none;margin-bottom:10px}
-textarea{min-height:90px;resize:vertical}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chip{flex:none;padding:8px 14px;border-radius:20px;background:var(--sec);color:var(--tx);border:0;font:inherit;font-size:14px}
-.chip.on{background:var(--btn);color:var(--btx)}
-.card{background:var(--sec);border-radius:14px;padding:14px;margin-bottom:10px}
-.card.tap:active{opacity:.7}
-.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.price{font-weight:700;white-space:nowrap}
-.hint{color:var(--hint);font-size:14px}
+
+async function callBot(action, extra={}){
+  const payload = { action, user_id: CURRENT_USER ? CURRENT_USER.id : null, ...extra };
+  const res = await fetch(WEBHOOK_URL, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  return await res.json();
+}
+
+let _confirmCb=null;
+function askConfirm(text,onYes){
+  $('confirmBody').textContent=text;
+  $('confirmOverlay').classList.remove('hidden');
+  _confirmCb=onYes;
+}
+$('confirmNo').addEventListener('click',()=>{$('confirmOverlay').classList.add('hidden');_confirmCb=null;});
+$('confirmYes').addEventListener('click',()=>{$('confirmOverlay').classList.add('hidden');
+  if(_confirmCb){const cb=_confirmCb;_confirmCb=null;cb();}});
+
+/* ========== АВТОРИЗАЦИЯ ========== */
+let CURRENT_USER=null;
+let PRODUCTS_CACHE=[];
+
+function onTelegramAuth(user){
+  CURRENT_USER=user;
+  localStorage.setItem('tg_user', JSON.stringify(user));
+  startApp();
+}
+window.onTelegramAuth = onTelegramAuth;
+
+function restoreSession(){
+  try{
+    const s=JSON.parse(localStorage.getItem('tg_user')||'null');
+    if(s&&s.id){CURRENT_USER=s;return true;}
+  }catch{}
+  return false;
+}
+
+function logout(){localStorage.removeItem('tg_user');location.reload();}
+
+function startApp(){
+  $('loginScreen').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  const name = CURRENT_USER.first_name || CURRENT_USER.username || 'Гость';
+  $('userName').textContent = name;
+  const av = $('userAvatar');
+  if(CURRENT_USER.photo_url){
+    av.outerHTML = `<img id="userAvatar" src="${esc(CURRENT_USER.photo_url)}" alt="">`;
+  } else {
+    av.textContent = name[0]?.toUpperCase() || '?';
+  }
+  $('adminNavBtn').classList.toggle('hidden', !ADMIN_IDS.includes(int(CURRENT_USER.id)));
+  showView('shop');
+  loadProducts();
+}
+
+/* ========== НАВИГАЦИЯ ========== */
+const views=['shop','search','purchases','admin'];
+function showView(name){
+  views.forEach(v=>$('view-'+v).classList.toggle('hidden', v!==name));
+  document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('primary',b.dataset.nav===name));
+  if(name==='purchases') renderPurchases();
+  if(name==='admin') renderAdmin();
+}
+document.querySelectorAll('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.nav)));
+$('logoutBtn').addEventListener('click',logout);
+$('refreshBtn').addEventListener('click',()=>loadProducts(true));
+
+/* ========== ВИТРИНА ========== */
+async function loadProducts(showToast=false){
+  const grid=$('shopGrid');
+  grid.innerHTML=`<div class="empty"><div class="big">⏳</div>Загрузка...</div>`;
+  try{
+    const data=await callBot('get_products');
+    if(!data.ok||!data.products) throw new Error(data.error||'Ошибка');
+    PRODUCTS_CACHE=data.products;
+    renderShop(); updateStats();
+    if(showToast) toast('✅ Обновлено');
+  }catch(e){
+    grid.innerHTML=`<div class="empty"><div class="big">⚠️</div>Не удалось загрузить<br><small>${esc(e.message)}</small></div>`;
+  }
+}
+function updateStats(){
+  $('statFree').textContent=PRODUCTS_CACHE.filter(p=>p.status==='free').length;
+  $('statSold').textContent=PRODUCTS_CACHE.filter(p=>p.status==='sold').length;
+}
+function renderShop(filter=''){
+  const q=filter.trim().toLowerCase();
+  const list=PRODUCTS_CACHE.filter(p=>p.status==='free' && (!q||String(p.name).toLowerCase().includes(q)));
+  const grid=$('shopGrid');
+  if(!list.length){
+    grid.innerHTML=`<div class="empty"><div class="big">📭</div>${q?'Ничего не найдено':'Товаров пока нет'}</div>`;
+    return;
+  }
+  grid.innerHTML=list.map(cardHTML).join('');
+  grid.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click',()=>openProduct(int(el.dataset.open))));
+}
+function cardHTML(p){
+  return `<div class="card">
+    <span class="status free">🟢 свободен</span>
+    <h3>${esc(p.name)}</h3>
+    <div class="region">🌍 ${esc(p.region||'—')}</div>
+    <div class="desc">${esc(p.description||'')}</div>
+    <div class="price">${esc(String(p.price))} ₽</div>
+    <button class="btn primary" data-open="${p.id}">Купить #${p.id}</button>
+  </div>`;
+}
+$('shopSearch').addEventListener('input',e=>renderShop(e.target.value));
+
+/* ========== ПОИСК ========== */
+$('searchInput').addEventListener('input',e=>{
+  const q=e.target.value.trim().toLowerCase();
+  const grid=$('searchGrid');
+  if(!q){grid.innerHTML='';return;}
+  const found=PRODUCTS_CACHE.filter(p=>p.status==='free'&&String(p.name).toLowerCase().includes(q));
+  if(!found.length){grid.innerHTML=`<div class="empty"><div class="big">😔</div>Ничего не найдено</div>`;return;}
+  grid.innerHTML=found.map(cardHTML).join('');
+  grid.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click',()=>openProduct(int(el.dataset.open))));
+});
+
+/* ========== ПОКУПКА ========== */
+let pendingBuy=null;
+function openProduct(id){
+  const p=PRODUCTS_CACHE.find(x=>int(x.id)===id&&x.status==='free');
+  if(!p){toast('❌ Товар недоступен');return;}
+  pendingBuy=p;
+  $('buyTitle').textContent=`Оплата товара #${p.id}`;
+  $('buyBody').innerHTML=`
+    <div><b>${esc(p.name)}</b></div>
+    <div style="color:var(--muted);font-size:13px">Регион: ${esc(p.region||'—')}</div>
+    <div style="color:var(--muted);font-size:13px;white-space:pre-line">${esc(p.description||'')}</div>
+    <div style="font-size:20px;font-weight:800;color:var(--accent)">${esc(String(p.price))} ₽</div>
+    <div style="font-size:13px">Ссылка: <a href="${DONATE_URL}" target="_blank" style="color:var(--accent)">${DONATE_URL}</a></div>
+    <div style="font-size:13px;color:var(--red)">⚠️ В сообщении к донату укажите код ниже:</div>
+    <div class="pay-code" id="payCodeBox">— — — — — —</div>
+    <div style="font-size:12px;color:var(--muted)">После оплаты отправьте скриншот админу в бота.</div>`;
+  $('buyOverlay').classList.remove('hidden');
+}
+$('buyCancel').addEventListener('click',()=>{$('buyOverlay').classList.add('hidden');pendingBuy=null;});
+$('buyConfirm').addEventListener('click',async()=>{
+  if(!pendingBuy)return;
+  try{
+    const data=await callBot('buy',{product_id:pendingBuy.id});
+    if(!data.ok){toast('❌ '+(data.error||'Ошибка'));return;}
+    $('payCodeBox').textContent=data.pay_code||'— — — — — —';
+    toast(`✅ Заявка создана. Код: ${data.pay_code||'—'}`,4000);
+    setTimeout(()=>{$('buyOverlay').classList.add('hidden');pendingBuy=null;loadProducts();},1500);
+  }catch(e){toast('❌ '+e.message);}
+});
+
+/* ========== МОИ ПОКУПКИ ========== */
+async function renderPurchases(){
+  const el=$('purchasesList');
+  el.innerHTML=`<div class="empty">⏳ Загрузка...</div>`;
+  try{
+    const data=await callBot('my_purchases');
+    if(!data.ok) throw new Error(data.error||'Ошибка');
+    const list=(data.purchases||[]).slice().reverse();
+    if(!list.length){el.innerHTML=`<div class="empty"><div class="big">🧾</div>У вас пока нет покупок</div>`;return;}
+    el.innerHTML=list.map(o=>`
+      <div class="order">
+        <div class="head"><div><b>${esc(o.name)}</b> — ${esc(String(o.price))} ₽</div>${statusLabel(o.status)}</div>
+        <div class="meta">ID товара: <b>#${esc(o.id)}</b></div>
+        ${o.pay_code?`<div class="meta">Код в донате: <b>${esc(o.pay_code)}</b></div>`:''}
+      </div>`).join('');
+  }catch(e){el.innerHTML=`<div class="empty">⚠️ ${esc(e.message)}</div>`;}
+}
+function statusLabel(s){
+  const m={
+    pending:'<span class="status pending">⏳ ожидает</span>',
+    sold:'<span class="status free">✅ куплен</span>',
+    free:'<span class="status free">🟢 свободен</span>'
+  };
+  return m[s]||`<span class="status">${esc(s)}</span>`;
+}
+
+/* ========== АДМИН ========== */
+let adminTab='products';
+document.querySelectorAll('[data-atab]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    adminTab=btn.dataset.atab;
+    document.querySelectorAll('[data-atab]').forEach(b=>b.classList.toggle('active',b.dataset.atab===adminTab));
+    renderAdmin();
+  });
+});
+function isAdmin(){return CURRENT_USER&&ADMIN_IDS.includes(int(CURRENT_USER.id));}
+function renderAdmin(){
+  const box=$('adminContent');
+  if(!isAdmin()){box.innerHTML=`<div class="empty">⛔ Только для админа</div>`;return;}
+  if(adminTab==='products') return renderAdminProducts(box);
+  if(adminTab==='orders')   return renderAdminOrders(box);
+  if(adminTab==='add')      return renderAdminAdd(box);
+}
+async function renderAdminProducts(box){
+  box.innerHTML=`<div class="empty">⏳ Загрузка...</div>`;
+  try{
+    const data=await callBot('get_products');
+    const products=data.products||[];
+    PRODUCTS_CACHE=products;
+    if(!products.length){box.innerHTML=`<div class="empty">📭 Список пуст</div>`;return;}
+    box.innerHTML=products.map(p=>`
+      <div class="order">
+        <div class="head"><div><b>#${p.id} · ${esc(p.name)}</b></div>${statusLabel(p.status)}</div>
+        <div class="meta">Регион: ${esc(p.region||'—')} · Цена: ${esc(String(p.price))} ₽</div>
+        <div class="meta">Телефон: ${esc(p.phone||'—')}</div>
+        <div class="actions">
+          <button class="btn small red" data-del="${p.id}" ${p.status==='pending'?'disabled title="Активная заявка"':''}>🗑 Удалить</button>
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',()=>{
+      const id=int(el.dataset.del);
+      askConfirm(`Удалить товар #${id}?`,async()=>{
+        try{
+          const r=await callBot('delete_product',{product_id:id});
+          if(r.ok){toast('🗑 Удалено');renderAdmin();}
+          else toast('❌ '+(r.error||'Ошибка'));
+        }catch(e){toast('❌ '+e.message);}
+      });
+    }));
+  }catch(e){box.innerHTML=`<div class="empty">⚠️ ${esc(e.message)}</div>`;}
+}
+async function renderAdminOrders(box){
+  box.innerHTML=`<div class="empty">⏳ Загрузка...</div>`;
+  try{
+    const data=await callBot('get_orders');
+    if(!data.ok) throw new Error(data.error||'Ошибка');
+    const list=data.orders||[];
+    if(!list.length){box.innerHTML=`<div class="empty">⏳ Заявок нет</div>`;return;}
+    box.innerHTML=list.map(p=>`
+      <div class="order">
+        <div class="head"><div><b>${esc(p.name)}</b> (#${p.id}) — ${esc(String(p.price))} ₽</div>${statusLabel(p.status)}</div>
+        <div class="meta">Код в донате: <b>${esc(p.pay_code||'—')}</b></div>
+        <div class="meta">Покупатель ID: <b>${esc(String(p.buyer_id||'—'))}</b></div>
+        <div class="actions">
+          <button class="btn small green" data-appr="${p.id}">✅ Подтвердить</button>
+          <button class="btn small red" data-rej="${p.id}">❌ Отклонить</button>
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('[data-appr]').forEach(el=>el.addEventListener('click',()=>resolveOrder(int(el.dataset.appr),true)));
+    box.querySelectorAll('[data-rej]').forEach(el=>el.addEventListener('click',()=>resolveOrder(int(el.dataset.rej),false)));
+  }catch(e){box.innerHTML=`<div class="empty">⚠️ ${esc(e.message)}</div>`;}
+}
+async function resolveOrder(prodId,approve){
+  try{
+    const r=await callBot('resolve_order',{product_id:prodId,approve});
+    if(r.ok){toast(approve?'✅ Подтверждено':'❌ Отклонено');renderAdmin();}
+    else toast('❌ '+(r.error||'Ошибка'));
+  }catch(e){toast('❌ '+e.message);}
+}
+function renderAdminAdd(box){
+  box.innerHTML=`
+    <div class="order">
+      <div><b>➕ Новый товар</b></div>
+      <input id="aRegion" placeholder="Регион" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px">
+      <input id="aName" placeholder="Название" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px">
+      <textarea id="aDesc" placeholder="Описание" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px;min-height:70px"></textarea>
+      <input id="aPrice" placeholder="Цена (цифры)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px">
+      <input id="aPhone" placeholder="Телефон" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px">
+      <div class="actions"><button class="btn green" id="aSave">✅ Сохранить</button></div>
+    </div>`;
+  $('aSave').addEventListener('click',async()=>{
+    const region=$('aRegion').value.trim();
+    const name=$('aName').value.trim();
+    const desc=$('aDesc').value.trim();
+    const priceStr=$('aPrice').value.trim();
+    const phone=$('aPhone').value.trim();
+    if(!region||!name||!desc||!phone){toast('❌ Заполните все поля');return;}
+    if(!/^\d+$/.test(priceStr)){toast('❌ Цена только цифрами');return;}
+    try{
+      const r=await callBot('add_product',{region,name,description:desc,price:int(priceStr),phone});
+      if(r.ok){toast(`✅ Товар #${r.id} добавлен`);adminTab='products';
+        document.querySelectorAll('[data-atab]').forEach(b=>b.classList.toggle('active',b.dataset.atab==='products'));
+        renderAdmin();}
+      else toast('❌ '+(r.error||'Ошибка'));
+    }catch(e){toast('❌ '+e.message);}
+  });
+}
+
+/* ========== СТАРТ ========== */
+if(restoreSession()) startApp();
+</script>
+</body>
+</html>
