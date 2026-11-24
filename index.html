@@ -33,10 +33,11 @@
   nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
   .btn{background:var(--card);color:var(--text);border:1px solid var(--border);
     padding:9px 15px;border-radius:12px;cursor:pointer;font-size:14px;
-    transition:.18s;display:inline-flex;align-items:center;gap:6px;}
+    transition:.18s;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
   .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
   .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;
     box-shadow:0 6px 18px rgba(91,140,255,.35)}
+  .btn.primary:hover{box-shadow:0 8px 24px rgba(91,140,255,.5)}
   .btn.green{background:var(--green);border-color:var(--green);color:#fff}
   .btn.red{background:var(--red);border-color:var(--red);color:#fff}
   .btn.small{padding:6px 11px;font-size:13px;border-radius:9px}
@@ -123,7 +124,6 @@
     background:linear-gradient(90deg,var(--accent),var(--accent2));
     -webkit-background-clip:text;background-clip:text;color:transparent}
   .login-box p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:24px}
-  .login-box .tg-widget-wrap{display:flex;justify-content:center;min-height:52px}
   .login-note{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.5}
   @media(max-width:600px){
     header{padding:12px 14px;gap:10px}
@@ -138,25 +138,35 @@
 </head>
 <body>
 
-<!-- ЛОГИН -->
+<!-- ============== ЭКРАН ВХОДА ============== -->
 <div id="loginScreen" class="login-screen">
   <div class="login-box">
     <div class="icon">🛍</div>
     <h1>Магазин аккаунтов</h1>
-    <p>Войдите через Telegram, чтобы покупать.</p>
-    <div class="tg-widget-wrap">
-      <script async src="https://telegram.org/js/telegram-widget.js?22"
-              data-telegram-login="AkkPokypkaBot"
-              data-size="large"
-              data-radius="12"
-              data-onauth="onTelegramAuth(user)"
-              data-request-access="write"></script>
-    </div>
-    <div class="login-note">Домен должен быть добавлен в BotFather через <b>/setdomain</b>.</div>
+    <p>Войдите через Telegram-бота, чтобы покупать.</p>
+    <button class="btn primary" id="tgLoginBtn" style="width:100%;padding:14px;font-size:15px">
+      ✈️ Войти через Telegram
+    </button>
+    <div class="login-note">Откроется бот — подтвердите вход кнопкой «✅ Да».</div>
   </div>
 </div>
 
-<!-- ПРИЛОЖЕНИЕ -->
+<!-- ============== МОДАЛКА ОЖИДАНИЯ ============== -->
+<div id="authWaitOverlay" class="overlay hidden">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:48px">✈️</div>
+    <h2>Подтвердите вход в боте</h2>
+    <p style="color:var(--muted);font-size:14px">
+      Откройте бота и нажмите <b>«✅ Да»</b>.<br>Сайт войдёт автоматически.
+    </p>
+    <div class="pay-code" id="authCodeDisplay">— — — — — —</div>
+    <a class="btn primary" id="openBotBtn" target="_blank" style="width:100%;justify-content:center">Открыть бота</a>
+    <button class="btn" id="authCancelBtn" style="width:100%">Отмена</button>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px" id="authStatusText">Ожидание подтверждения...</div>
+  </div>
+</div>
+
+<!-- ============== ПРИЛОЖЕНИЕ ============== -->
 <div id="app" class="hidden">
 <header>
   <div class="logo">🛍 Магазин аккаунтов</div>
@@ -209,7 +219,7 @@
 </main>
 </div>
 
-<!-- МОДАЛКА ПОКУПКИ -->
+<!-- ============== МОДАЛКА ПОКУПКИ ============== -->
 <div id="buyOverlay" class="overlay hidden">
   <div class="modal">
     <h2 id="buyTitle">Оплата</h2>
@@ -221,7 +231,7 @@
   </div>
 </div>
 
-<!-- ПОДТВЕРЖДЕНИЕ -->
+<!-- ============== ПОДТВЕРЖДЕНИЕ ============== -->
 <div id="confirmOverlay" class="overlay hidden">
   <div class="modal">
     <h2>Подтверждение</h2>
@@ -267,19 +277,19 @@ function askConfirm(text,onYes){
   _confirmCb=onYes;
 }
 $('confirmNo').addEventListener('click',()=>{$('confirmOverlay').classList.add('hidden');_confirmCb=null;});
-$('confirmYes').addEventListener('click',()=>{$('confirmOverlay').classList.add('hidden');
-  if(_confirmCb){const cb=_confirmCb;_confirmCb=null;cb();}});
+$('confirmYes').addEventListener('click',()=>{$('confirmOverlay').classList.add('hidden');if(_confirmCb){const cb=_confirmCb;_confirmCb=null;cb();}});
 
-/* ========== АВТОРИЗАЦИЯ ========== */
+/* ========== АВТОРИЗАЦИЯ ЧЕРЕЗ БОТА ========== */
 let CURRENT_USER=null;
 let PRODUCTS_CACHE=[];
+let _authPollTimer=null;
+let _authCode=null;
 
-function onTelegramAuth(user){
-  CURRENT_USER=user;
-  localStorage.setItem('tg_user', JSON.stringify(user));
-  startApp();
+function logout(){
+  localStorage.removeItem('tg_user');
+  CURRENT_USER=null;
+  location.reload();
 }
-window.onTelegramAuth = onTelegramAuth;
 
 function restoreSession(){
   try{
@@ -289,8 +299,57 @@ function restoreSession(){
   return false;
 }
 
-function logout(){localStorage.removeItem('tg_user');location.reload();}
+async function startTelegramAuth(){
+  try{
+    const data = await callBot('start_auth');
+    if(!data.ok){toast('❌ Ошибка генерации кода');return;}
+    _authCode = data.code;
+    $('authCodeDisplay').textContent = data.code;
+    $('authStatusText').textContent = 'Ожидание подтверждения...';
+    const link = `https://t.me/${BOT_USERNAME}?start=auth_${data.code}`;
+    $('openBotBtn').href = link;
+    $('authWaitOverlay').classList.remove('hidden');
+    window.open(link, '_blank');
+    startAuthPolling();
+  }catch(e){toast('❌ '+e.message);}
+}
 
+function startAuthPolling(){
+  stopAuthPolling();
+  _authPollTimer = setInterval(async () => {
+    if(!_authCode) return;
+    try{
+      const data = await callBot('check_auth', { code: _authCode });
+      if(!data.ok) return;
+      if(data.status === 'approved'){
+        stopAuthPolling();
+        CURRENT_USER = data.user;
+        localStorage.setItem('tg_user', JSON.stringify(CURRENT_USER));
+        $('authWaitOverlay').classList.add('hidden');
+        toast('✅ Вход выполнен!', 2000);
+        startApp();
+      } else if(data.status === 'rejected'){
+        stopAuthPolling();
+        $('authStatusText').textContent = '❌ Вход отклонён';
+        toast('❌ Вход отклонён');
+        setTimeout(() => $('authWaitOverlay').classList.add('hidden'), 1500);
+      }
+    }catch{}
+  }, 2000);
+}
+
+function stopAuthPolling(){
+  if(_authPollTimer){clearInterval(_authPollTimer);_authPollTimer=null;}
+}
+
+$('tgLoginBtn').addEventListener('click', startTelegramAuth);
+$('authCancelBtn').addEventListener('click', () => {
+  stopAuthPolling();
+  $('authWaitOverlay').classList.add('hidden');
+  _authCode = null;
+});
+
+/* ========== СТАРТ ПРИЛОЖЕНИЯ ========== */
 function startApp(){
   $('loginScreen').classList.add('hidden');
   $('app').classList.remove('hidden');
@@ -521,10 +580,12 @@ function renderAdminAdd(box){
     if(!/^\d+$/.test(priceStr)){toast('❌ Цена только цифрами');return;}
     try{
       const r=await callBot('add_product',{region,name,description:desc,price:int(priceStr),phone});
-      if(r.ok){toast(`✅ Товар #${r.id} добавлен`);adminTab='products';
+      if(r.ok){
+        toast(`✅ Товар #${r.id} добавлен`);
+        adminTab='products';
         document.querySelectorAll('[data-atab]').forEach(b=>b.classList.toggle('active',b.dataset.atab==='products'));
-        renderAdmin();}
-      else toast('❌ '+(r.error||'Ошибка'));
+        renderAdmin();
+      } else toast('❌ '+(r.error||'Ошибка'));
     }catch(e){toast('❌ '+e.message);}
   });
 }
@@ -533,4 +594,4 @@ function renderAdminAdd(box){
 if(restoreSession()) startApp();
 </script>
 </body>
-</html>
+                                                                                           </html>
